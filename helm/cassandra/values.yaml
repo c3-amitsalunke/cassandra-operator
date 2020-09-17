@@ -10,8 +10,8 @@ datacenter: dc1
 cluster: test-cluster
 
 image:
-  cassandraRepository: gcr.io/cassandra-operator/cassandra-3.11.8
-  sidecarRepository: gcr.io/cassandra-operator/cassandra-sidecar
+  cassandraRepository: salunkea/cassandra-3.11.8
+  sidecarRepository: salunkea/cassandra-sidecar
   cassandraTag: latest
   sidecarTag: latest
 

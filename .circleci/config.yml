@@ -56,64 +56,11 @@ jobs:
           paths:
             - "/go/pkg/mod"
 
-  test-gcp:
-    docker:
-      # specify the version you desire here
-      - image: gcr.io/cassandra-operator/jdk8-gcloud-sdk:2.0.2
-        auth:
-          username: _json_key
-          password: $GOOGLE_AUTH
-
-    working_directory: ~/cassandra-operator
-
-    environment:
-      # Customize the JVM maximum heap limit
-      MAVEN_OPTS: -Xmx3200m
-      # for helm to be able to use registry feature for push charts https://helm.sh/docs/topics/registries/
-      HELM_EXPERIMENTAL_OCI: 1
-
-    steps:
-      - checkout
-
-      - run:
-          name: Dump Google Cloud Credentials to file
-          command: echo ${GOOGLE_AUTH} > ${HOME}/gcp-key.json
-
-      - run:
-          name: Setup Google Cloud
-          command: gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json --project=cassandra-operator && gcloud --quiet config set project cassandra-operator && gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
-
-      - setup_remote_docker:
-          docker_layer_caching: false
-
-      - run:
-          name: Create Docker images
-          command: ./buildenv/build-all dev
-
-      - run:
-          name: Release Docker images
-          command: ./buildenv/release-all dev
-
-      - run:
-          name: Setup K8s cluster and Credentials
-          command: gcloud beta container clusters create test-cluster --release-channel rapid --zone ${GOOGLE_COMPUTE_ZONE} && sleep 60 && gcloud container clusters get-credentials test-cluster --zone us-central1-b --project cassandra-operator
-
-      - run:
-          name: Deploy Operator and Cassandra
-          command: ./test/operator-deployment.sh && ./test/cassandra-cluster-deployment-test.sh
-
-      - run:
-          name: Cleanup GCP resources
-          command: gcloud container clusters delete test-cluster --zone us-central1-b --project cassandra-operator --quiet
-          when: always
 
   release:
     docker:
       # specify the version you desire here
       - image: gcr.io/cassandra-operator/jdk8-gcloud-sdk:2.0.2
-        auth:
-          username: _json_key
-          password: $GOOGLE_AUTH
 
     working_directory: ~/cassandra-operator
 
@@ -145,13 +92,6 @@ jobs:
 
 
       # Download and cache dependencies
-      - run:
-          name: Dump Google Cloud Credentials to file
-          command: echo ${GOOGLE_AUTH} > ${HOME}/gcp-key.json
-      - run:
-          name: Setup Google Cloud
-          command: gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json && gcloud --quiet config set project ${GOOGLE_PROJECT_ID} && gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
-
       - setup_remote_docker:
           docker_layer_caching: false
 
@@ -175,13 +115,6 @@ workflows:
             branches:
               ignore:
                 - master
-      - test-gcp:
-          requires:
-            - build
-            - release
-          filters:
-            branches:
-              only: master
       - release:
           requires:
             - repo-check
